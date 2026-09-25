@@ -1,0 +1,10 @@
+data/
+artifacts/
+__pycache__/
+*.pyc
+.venv/
+reports/
+vault/30-Entities/
+
+# Amazon competition material - kept local, not redistributed
+about.md
