@@ -8,3 +8,6 @@ vault/30-Entities/
 
 # Amazon competition material - kept local, not redistributed
 about.md
+data_hard/
+final_runs.log
+*_submission.zip

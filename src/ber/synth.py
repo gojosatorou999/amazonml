@@ -93,8 +93,12 @@ class Record:
 
 
 class Generator:
-    def __init__(self, seed: int = 0):
+    def __init__(self, seed: int = 0, hard: bool = False):
         self.rng = random.Random(seed)
+        # hard mode: the ambiguity real ER data has and the clean mode lacks --
+        # chain branches (same name, different address, each its own S1 entity),
+        # co-located businesses (same address, different name), heavier noise.
+        self.hard = hard
 
     # ---------- canonical entity ----------
 
@@ -142,7 +146,9 @@ class Generator:
             name = f"{name} {legal_short}"
         elif p < 0.80:
             name = f"{name} {legal_long}"
-        if r.random() < 0.25:                              # typo
+        if r.random() < (0.45 if self.hard else 0.25):     # typo
+            name = _typo(name, r)
+        if self.hard and r.random() < 0.15:
             name = _typo(name, r)
         if r.random() < 0.10:                              # punctuation noise
             name = name.replace(" ", ", ", 1)
@@ -151,7 +157,8 @@ class Generator:
     def variant_address(self, spec: dict) -> str:
         r = self.rng
         st = spec["street_short"] if r.random() < 0.5 else spec["street_long"]
-        parts = [f"{spec['house']} {spec['street_name']} {st}"]
+        house = spec["house"] if not (self.hard and r.random() < 0.12) else ""
+        parts = [f"{house} {spec['street_name']} {st}".strip()]
         if r.random() < 0.75:
             parts.append(spec["locality"])
         if r.random() < 0.20:                              # landmark instead of structure
@@ -178,9 +185,23 @@ class Generator:
         gt: dict[str, list[str]] = {}
         ccs, weights = list(countries), list(countries.values())
 
+        specs: list[dict] = []
+        pending: list[tuple[str, dict]] = []
         for i in range(n_entities):
             cc = r.choices(ccs, weights)[0]
-            canon_name, spec = self.canonical(cc)
+            if pending:
+                canon_name, spec = pending.pop()
+            else:
+                canon_name, spec = self.canonical(cc)
+                if self.hard and r.random() < 0.25:
+                    # a chain branch: identical name, different location
+                    _, other = self.canonical(spec["cc"])
+                    branch = {**other, "core": spec["core"], "legal": spec["legal"]}
+                    if r.random() < 0.5:
+                        branch["city"] = spec["city"]
+                    pending.append((canon_name, branch))
+            specs.append(spec)
+            cc = spec["cc"]
             s1_id = f"S1-{i:06d}"
             s1.append(Record(s1_id, canon_name, self.variant_address(spec),
                              r.choice(COUNTRY_LABEL[cc])))
@@ -203,6 +224,13 @@ class Generator:
             for _ in range(int(0.35 * len(bucket))):
                 cc = r.choices(ccs, weights)[0]
                 _, spec = self.canonical(cc)
+                if self.hard and specs and r.random() < 0.5:
+                    base = r.choice(specs)
+                    if r.random() < 0.5:   # same name, elsewhere (unlisted branch)
+                        spec = {**spec, "cc": base["cc"], "core": base["core"], "legal": base["legal"],
+                                "city": base["city"]}
+                    else:                  # different business at the same address
+                        spec = {**base, "core": spec["core"], "legal": spec["legal"]}
                 bucket.append(Record(f"{pref}-{len(bucket):06d}", self.variant_name(spec),
                                      self.variant_address(spec),
                                      r.choice(COUNTRY_LABEL[cc])))
@@ -233,10 +261,11 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--train-entities", type=int, default=8000)
     ap.add_argument("--test-entities", type=int, default=3000)
+    ap.add_argument("--hard", action="store_true", help="chains, co-located businesses, heavier noise")
     args = ap.parse_args()
     out = Path(args.out)
 
-    g = Generator(args.seed)
+    g = Generator(args.seed, hard=args.hard)
     s1, s2, s3, gt = g.build(args.train_entities, {"US": 0.5, "IN": 0.5})
     _write_source(out / "train" / "train_source1.tsv", s1)
     _write_source(out / "train" / "train_source2.tsv", s2)
@@ -244,7 +273,7 @@ def main() -> None:
     _write_truth(out / "train" / "train_ground_truth.tsv", s1, gt)
 
     # the test set carries the unseen third country, exactly like the real one
-    g2 = Generator(args.seed + 1000)
+    g2 = Generator(args.seed + 1000, hard=args.hard)
     t1, t2, t3, tgt = g2.build(args.test_entities, {"US": 0.40, "IN": 0.40, "FR": 0.20})
     _write_source(out / "test" / "test_source1.tsv", t1)
     _write_source(out / "test" / "test_source2.tsv", t2)

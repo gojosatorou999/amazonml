@@ -7,28 +7,32 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import polars as pl
+    import pandas as pd
 
 SOURCE_COLUMNS = ["entity_id", "business_name", "business_address", "country"]
 
 
-def read_source(path: str | Path) -> "pl.DataFrame":
-    """Read a *_sourceN.tsv. Everything stays Utf8; nulls become empty strings."""
-    import polars as pl  # lazy: ground-truth + submission I/O stay stdlib-only
+def read_source(path: str | Path) -> "pd.DataFrame":
+    """Read a *_sourceN.tsv. Everything stays str; nulls become empty strings."""
+    import csv as _csv
 
-    df = pl.read_csv(
+    import pandas as pd  # lazy: ground-truth + submission I/O stay stdlib-only
+
+    df = pd.read_csv(
         path,
-        separator="\t",
-        quote_char=None,          # addresses contain quotes; never let csv eat them
-        has_header=True,
-        infer_schema_length=0,    # all Utf8
+        sep="\t",
+        dtype=str,
+        keep_default_na=False,     # 'NA' is a legitimate token in names/addresses
+        quoting=_csv.QUOTE_NONE,   # addresses contain quotes; never let csv eat them
+        encoding="utf-8",
     )
     missing = [c for c in SOURCE_COLUMNS if c not in df.columns]
     if missing:
-        raise ValueError(f"{path}: missing columns {missing} (got {df.columns})")
-    return df.select(SOURCE_COLUMNS).with_columns(
-        pl.col(SOURCE_COLUMNS).fill_null("").str.strip_chars()
-    )
+        raise ValueError(f"{path}: missing columns {missing} (got {list(df.columns)})")
+    df = df[SOURCE_COLUMNS].fillna("")
+    for c in SOURCE_COLUMNS:
+        df[c] = df[c].str.strip()
+    return df.reset_index(drop=True)
 
 
 def read_ground_truth(path: str | Path) -> dict[str, set[str]]:

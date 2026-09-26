@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entity Resolution Review</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#ffffff; --ink:#15181d; --muted:#5d6572; --line:#e3e6eb;
+  --accent:#2f5bea; --accent-soft:#e8eefe; --pos:#1f8a4c; --pos-soft:#e3f4ea;
+  --neg:#c2412d; --neg-soft:#fbe9e5; --hl:#fff1b8; --hl-ink:#5a4600;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0f1115; --panel:#171a20; --ink:#e7e9ee; --muted:#9aa3b2; --line:#2a2f38;
+    --accent:#7b9bff; --accent-soft:#1d2540; --pos:#4cc585; --pos-soft:#15291e;
+    --neg:#ff7a63; --neg-soft:#35191a; --hl:#4a3f10; --hl-ink:#ffe68a;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:18px 24px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:17px;margin:0 0 10px;font-weight:650;letter-spacing:-.01em}
+.kpis{display:flex;flex-wrap:wrap;gap:10px}
+.kpi{border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-width:120px}
+.kpi b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--muted);font-size:12px}
+nav{display:flex;gap:4px;padding:10px 24px 0;background:var(--panel);border-bottom:1px solid var(--line)}
+nav button{border:0;background:none;color:var(--muted);padding:8px 12px;font:inherit;cursor:pointer;border-bottom:2px solid transparent}
+nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+main{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:16px;padding:16px 24px;max-width:1400px;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px}
+#list{padding:10px;max-height:calc(100vh - 210px);overflow:auto}
+#list input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit;margin-bottom:8px}
+.row{padding:8px 10px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.row:hover,.row.sel{background:var(--accent-soft)}
+.row small{color:var(--muted);display:block}
+.pill{font-size:11px;border-radius:99px;padding:2px 8px;white-space:nowrap;align-self:center;border:1px solid var(--line);color:var(--muted)}
+.pill.m{background:var(--pos-soft);color:var(--pos);border-color:transparent}
+#detail{padding:18px 20px;min-height:300px}
+.s1{border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:14px}
+.s1 h2{font-size:16px;margin:0 0 2px}
+.id{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.card.emit{border-color:var(--pos);box-shadow:inset 3px 0 0 var(--pos)}
+.card-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.badge{font-size:11px;font-weight:600;border-radius:6px;padding:2px 8px}
+.badge.emit{background:var(--pos-soft);color:var(--pos)} .badge.hold{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin:8px 0 4px}
+.bar i{display:block;height:100%;background:var(--accent)}
+.tok{padding:0 2px;border-radius:3px}
+.tok.hit{background:var(--hl);color:var(--hl-ink)}
+details{margin-top:8px} summary{cursor:pointer;color:var(--muted);font-size:12px}
+.shap{display:grid;grid-template-columns:minmax(120px,210px) 1fr 58px;gap:4px 10px;align-items:center;margin-top:8px;font-size:12px}
+.shap .lab{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shap .track{position:relative;height:10px}
+.shap .track::before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:1px solid var(--line)}
+.shap .track i{position:absolute;top:1px;height:8px;border-radius:2px}
+.shap .num{font-family:var(--mono);text-align:right}
+.empty{color:var(--muted);padding:30px 0;text-align:center}
+.qrow{display:grid;grid-template-columns:1fr auto;gap:8px;padding:10px;border-bottom:1px solid var(--line);cursor:pointer}
+.qrow:hover{background:var(--accent-soft)}
+.note{color:var(--muted);font-size:12px;margin:0 0 10px}
+@media (max-width:760px){main{grid-template-columns:1fr;padding:12px 16px} header,nav{padding-left:16px;padding-right:16px} #list{max-height:40vh}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Business Entity Resolution — review</h1>
+  <div class="kpis" id="kpis"></div>
+</header>
+<nav role="tablist">
+  <button role="tab" aria-selected="true" data-tab="entities">Entities</button>
+  <button role="tab" aria-selected="false" data-tab="queue">Review queue</button>
+</nav>
+<main>
+  <section class="panel" id="list"></section>
+  <section class="panel" id="detail"><div class="empty">Select a Source-1 entity to see its candidates, calibrated probabilities and why the model decided what it did.</div></section>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const api = p => fetch(p).then(r => r.json());
+let tab = 'entities', selected = null, timer = null;
+
+async function kpis(){
+  const s = await api('/api/summary');
+  const k = [
+    [s.n_s1?.toLocaleString(), 'Source-1 entities'],
+    [s.cand_per_s1?.mean?.toFixed(2), 'candidates / entity'],
+    [s.matched_pairs?.toLocaleString(), 'matched pairs'],
+    [(100*s.empty_share).toFixed(1)+'%', 'predicted singletons'],
+  ];
+  if (s.holdout_score) k.push([s.holdout_score.macro_f.toFixed(4), 'hold-out macro F0.5']);
+  $('#kpis').innerHTML = k.map(([b,t]) => `<div class="kpi"><b>${esc(b)}</b><span>${t}</span></div>`).join('');
+}
+
+async function renderEntities(q=''){
+  const rows = await api('/api/entities?q=' + encodeURIComponent(q));
+  $('#list').innerHTML = `<input id="q" placeholder="Search name, address or S1 id" value="${esc(q)}" aria-label="Search entities">` +
+    (rows.length ? rows.map(r => `<div class="row ${r.id===selected?'sel':''}" data-id="${esc(r.id)}">
+      <div><div>${esc(r.name)}</div><small><span class="id">${esc(r.id)}</span> · ${esc(r.country)} · ${r.n_cand} cand.</small></div>
+      <span class="pill ${r.n_match?'m':''}">${r.n_match ? r.n_match+' match'+(r.n_match>1?'es':'') : 'singleton'}</span></div>`).join('')
+      : '<div class="empty">No entities match.</div>');
+  const inp = $('#q'); inp.focus(); inp.setSelectionRange(q.length, q.length);
+  inp.oninput = e => { clearTimeout(timer); timer = setTimeout(() => renderEntities(e.target.value), 200); };
+}
+
+async function renderQueue(){
+  const rows = await api('/api/review');
+  $('#list').innerHTML = `<p class="note">Ordered by expected value of perfect information: how much expected F0.5 rises if a reviewer labels the pair. The metric itself is the acquisition function.</p>` +
+    (rows.length ? rows.map(r => `<div class="qrow" data-id="${esc(r.id)}"><div>${esc(r.name)}<br><small class="id">${esc(r.id)} ↔ ${esc(r.pair)} · p=${r.p.toFixed(2)}</small></div>
+      <span class="pill">+${r.gain.toFixed(3)}</span></div>`).join('') : '<div class="empty">No uncertain decisions.</div>');
+}
+
+function toks(list){ return list.map(([t,hit]) => `<span class="tok ${hit?'hit':''}">${esc(t)}</span>`).join(' '); }
+
+function shapRows(sh){
+  const m = Math.max(...sh.map(s => Math.abs(s.c)), 1e-6);
+  return `<div class="shap">` + sh.map(s => {
+    const w = 50*Math.abs(s.c)/m, left = s.c >= 0 ? 50 : 50-w;
+    return `<div class="lab" title="${esc(s.f)} = ${s.v.toFixed(3)}">${esc(s.label)} <span class="id">${s.v.toFixed(2)}</span></div>
+      <div class="track"><i style="left:${left}%;width:${w}%;background:${s.c>=0?'var(--pos)':'var(--neg)'}"></i></div>
+      <div class="num" style="color:${s.c>=0?'var(--pos)':'var(--neg)'}">${s.c>=0?'+':''}${s.c.toFixed(2)}</div>`;
+  }).join('') + `</div>`;
+}
+
+async function renderDetail(id){
+  selected = id;
+  document.querySelectorAll('.row').forEach(r => r.classList.toggle('sel', r.dataset.id === id));
+  const e = await api('/api/entity/' + encodeURIComponent(id));
+  if (e.error){ $('#detail').innerHTML = `<div class="empty">${esc(e.error)}</div>`; return; }
+  const cands = e.candidates.map(c => `<div class="card ${c.emitted?'emit':''}">
+    <div class="card-top"><div><b>${toks(c.name_tokens)}</b><br><span class="id">${esc(c.id)}</span> · ${esc(c.country)}</div>
+    <span class="badge ${c.emitted?'emit':'hold'}">${c.emitted?'MATCH':'held back'}</span></div>
+    <div style="margin-top:6px;color:var(--muted)">${toks(c.addr_tokens)}</div>
+    <div class="bar"><i style="width:${(100*c.p).toFixed(1)}%"></i></div>
+    <small>calibrated p(match) <b>${c.p.toFixed(3)}</b> · stage-1 ${c.p1.toFixed(3)}</small>
+    <details><summary>Why — TreeSHAP attributions (log-odds)</summary>${shapRows(c.shap)}</details>
+  </div>`).join('');
+  $('#detail').innerHTML = `<div class="s1"><h2>${esc(e.name)}</h2><div>${esc(e.address)}</div>
+    <div class="id">${esc(e.id)} · ${esc(e.country)}</div></div>` +
+    (cands || `<div class="empty">No candidates survived blocking — predicted singleton (empty list scores 1.0 if correct).</div>`);
+}
+
+document.addEventListener('click', ev => {
+  const t = ev.target.closest('[data-id]'); if (t) renderDetail(t.dataset.id);
+  const b = ev.target.closest('nav button');
+  if (b){ tab = b.dataset.tab; document.querySelectorAll('nav button').forEach(x => x.setAttribute('aria-selected', x===b));
+    tab === 'queue' ? renderQueue() : renderEntities(); }
+});
+kpis(); renderEntities();
+</script>
+</body>
+</html>

@@ -125,3 +125,30 @@ def choose_set(
         curve = curve[: max_k + 1]
     k = int(np.argmax(curve))
     return ids[:k], float(curve[k])
+
+
+def evpi(probs: np.ndarray, beta2: float = BETA2) -> tuple[float, int]:
+    """Expected value of perfect information: how much E[F] rises if a human
+    labels one candidate.  Returns (best gain, index of that candidate).
+
+    For candidate c:  EVPI_c = p_c * max E[F | c=1] + (1-p_c) * max E[F | c=0] - max E[F].
+    Ranking entities by this is active learning with the competition metric as
+    the acquisition function: reviewers see the pairs where a decision moves
+    the score most, not merely the ones nearest 0.5.
+    """
+    p = np.clip(np.asarray(probs, dtype=float), 1e-9, 1 - 1e-9)
+    if p.size == 0:
+        return 0.0, -1
+
+    def best(q):
+        q = np.sort(q)[::-1]
+        return float(expected_f_curve(q, beta2).max())
+
+    base = best(p)
+    gains = []
+    for c in range(p.size):
+        hi, lo = p.copy(), p.copy()
+        hi[c], lo[c] = 1 - 1e-9, 1e-9
+        gains.append(p[c] * best(hi) + (1 - p[c]) * best(lo) - base)
+    c = int(np.argmax(gains))
+    return float(gains[c]), c

@@ -10,27 +10,29 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from unidecode import unidecode
-
 _AMP = re.compile(r"\s*&\s*")
-_NONALNUM = re.compile(r"[^0-9a-z]+")
+_NONWORD = re.compile(r"[\W_]+")
 _WS = re.compile(r"\s+")
 _DIGIT_RUN = re.compile(r"\d+")
+_DOTTED = re.compile(r"(?<!\w)(?:[^\W\d_]\.){2,}(?:[^\W\d_](?!\w))?")
+_LIGATURES = str.maketrans({"ß": "ss", "æ": "ae", "œ": "oe", "ø": "o", "ł": "l", "đ": "d", "ı": "i"})
 
 
 def fold(s: str) -> str:
-    """Unicode NFKC -> accent/script fold -> lowercase -> punctuation squash.
+    """NFKC -> lowercase -> strip diacritics -> punctuation squash.
 
-    `unidecode` is a bundled transliteration table, not a network lookup, so it
-    is fair-play safe.  It handles Devanagari->Latin for the India records and
-    strips French diacritics (Societe/Societe) in one pass.
+    Standard-library only (no transliteration table, no licence questions):
+    NFKD decomposition separates base letters from combining marks, which are
+    dropped, so 'Société Générale' and 'Societe Generale' fold identically.
+    Letters of any script survive as word characters rather than being deleted.
     """
     if not s:
         return ""
     s = unicodedata.normalize("NFKC", s)
-    s = _AMP.sub(" and ", s)
-    s = unidecode(s).lower()
-    s = _NONALNUM.sub(" ", s)
+    s = _AMP.sub(" and ", s).lower().translate(_LIGATURES)
+    s = "".join(ch for ch in unicodedata.normalize("NFKD", s) if not unicodedata.combining(ch))
+    s = _DOTTED.sub(lambda m: m.group(0).replace(".", ""), s)   # 's.a.r.l.' -> 'sarl'
+    s = _NONWORD.sub(" ", s)
     return _WS.sub(" ", s).strip()
 
 
