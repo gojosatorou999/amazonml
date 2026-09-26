@@ -1,0 +1,43 @@
+{
+ "split": "test",
+ "timings": {
+  "prepare": 1.26,
+  "block": 7.74,
+  "pair_features": 9.85,
+  "score+decide": 4.28
+ },
+ "groups": {
+  "IN": "IN",
+  "India": "IN",
+  "United States": "USA",
+  "FR": "France",
+  "France": "France",
+  "US": "USA",
+  "USA": "USA"
+ },
+ "n_s1": 3000,
+ "n_r": 7058,
+ "pool_pairs": 97681,
+ "cand_pairs": 5431,
+ "cand_per_s1": {
+  "mean": 1.8103333333333333,
+  "median": 2.0,
+  "p95": 4.0,
+  "max": 6,
+  "zero_share": 0.106
+ },
+ "matched_pairs": 5188,
+ "empty_share": 0.11333333333333333,
+ "holdout_score": {
+  "macro_f": 0.98956424107082,
+  "n": 3000,
+  "singleton_f": 0.9792899408284024,
+  "n_singletons": 338,
+  "matched_f": 0.9908687915899549,
+  "n_matched": 2662,
+  "precision_micro": 0.9944101773323053,
+  "recall_micro": 0.9866131191432396
+ },
+ "holdout_cand_recall": 0.9921591126410404,
+ "holdout_pool_recall": 0.9975138649837445
+}

@@ -36,6 +36,21 @@ make package TEAM=name   # <name>_submission.zip in the organisers' layout
 
 Without `make`: `PYTHONPATH=src python -m ber.cli all --data data`.
 
+### Getting the dataset
+
+The real competition data (2.5 GB, every TSV > GitHub's 100 MB file limit) is attached to the
+`dataset-v1` release of this private repo rather than committed. From the repo root:
+
+```bash
+gh release download dataset-v1 --dir dist_release
+unzip dist_release/train.zip -d 6ab10eb3b23ba_student_resource/student_resource
+unzip dist_release/test.zip  -d 6ab10eb3b23ba_student_resource/student_resource
+```
+
+This restores `6ab10eb3b23ba_student_resource/student_resource/dataset/{train,test}/`, next to the
+organisers' `utils/validate_submission.py`, `README.md` and `Documentation_template.md` (those
+are committed). Findings from the first look at the real data are in `HANDOFF.md`.
+
 ### Data layout
 
 ```

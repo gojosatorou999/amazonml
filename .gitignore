@@ -1,13 +1,12 @@
-data/
-artifacts/
 __pycache__/
 *.pyc
 .venv/
-reports/
-vault/30-Entities/
-
-# Amazon competition material - kept local, not redistributed
-about.md
-data_hard/
 final_runs.log
 *_submission.zip
+
+# Real competition dataset: every TSV is over GitHub's 100 MB file limit, so it
+# ships as release assets instead (see README "Getting the dataset").
+6ab10eb3b23ba_student_resource/student_resource/dataset/
+dist_release/
+__MACOSX/
+.DS_Store
