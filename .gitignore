@@ -10,3 +10,11 @@ final_runs.log
 dist_release/
 __MACOSX/
 .DS_Store
+
+# Personal Claude Code overrides
+.claude/settings.local.json
+
+# Competition dataset (raw TSVs) and derived copies/excerpts -- too large for GitHub
+student_resource/dataset/
+work/*.parquet
+work/peek.txt
